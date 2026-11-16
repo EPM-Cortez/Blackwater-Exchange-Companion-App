@@ -17,6 +17,11 @@ Compare its SHA-256 with the release's `SHA256SUMS.txt` to check that you downlo
 Get-FileHash .\BlackwaterExchange-0.1.1-x64.msi -Algorithm SHA256
 ```
 
+Price sync requires a Forever Craft Assistant version that reads `ForeverCraftAssistantMarketData`. The companion
+was tested with addon version 1.7.4. The public CurseForge 1.3.2 package predates that reader, and Blackwater's addon
+download endpoint returned HTTP 404 during release verification. Preview testers need a compatible addon installed
+separately.
+
 Select your WoW Forever `_forever_` folder if the app has not found it. After Forever Craft Assistant has saved a
 character's realm, faction and region, the app can find the right auction houses and write fresh prices. Use **Update
 now** in the desktop app, then `/reload` in WoW to load the new data into Forever Craft Assistant. Price sync works
