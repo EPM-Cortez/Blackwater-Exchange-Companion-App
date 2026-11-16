@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Blackwater.App/Blackwater.App.csproj" />
+    <Project Path="src/Blackwater.Cli/Blackwater.Cli.csproj" />
+    <Project Path="src/Blackwater.Core/Blackwater.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Blackwater.Core.Tests/Blackwater.Core.Tests.csproj" />
+  </Folder>
+</Solution>

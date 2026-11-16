@@ -1,0 +1,36 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="Blackwater Exchange" Manufacturer="Blackwater Exchange"
+           Version="$(var.Version)" UpgradeCode="{2C08EF3F-DC80-4870-BA3F-598B9500F57B}"
+           Scope="perMachine">
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Blackwater Exchange is already installed."
+                  Schedule="afterInstallInitialize" />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Icon Id="AppIcon" SourceFile="$(var.AppIcon)" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon" />
+    <Property Id="ARPURLINFOABOUT" Value="https://blackwater.exchange/" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Blackwater Exchange" />
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder" />
+
+    <Feature Id="Companion" Title="Blackwater Exchange" Level="1">
+      <ComponentGroupRef Id="ApplicationFiles" />
+    </Feature>
+  </Package>
+
+  <Fragment>
+    <ComponentGroup Id="ApplicationFiles" Directory="INSTALLFOLDER">
+      <Files Include="$(var.PublishDirectory)\**">
+        <Exclude Files="$(var.PublishDirectory)\BlackwaterExchange.exe" />
+      </Files>
+      <Component Id="AppExecutable" Guid="*">
+        <File Id="BlackwaterExe" Source="$(var.PublishDirectory)\BlackwaterExchange.exe" KeyPath="yes">
+          <Shortcut Id="StartMenuShortcut" Directory="ProgramMenuFolder" Name="Blackwater Exchange"
+                    Advertise="yes" WorkingDirectory="INSTALLFOLDER" Icon="AppIcon" />
+        </File>
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+</Wix>

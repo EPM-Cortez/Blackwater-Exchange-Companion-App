@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The tray app. WPF for the window, Windows Forms only for the tray icon (both part of .NET's Windows
+       Desktop runtime). No packages. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>BlackwaterExchange</AssemblyName>
+    <RootNamespace>BlackwaterExchange.App</RootNamespace>
+    <Version>0.1.1</Version>
+    <Product>Blackwater Exchange</Product>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Drawn from the logo by StoreArt.cs: run the app with the assets switch and the Assets folder. -->
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- WPF and Windows Forms share type names (Application, Button); keep Forms out of the global usings. -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Blackwater.Core/Blackwater.Core.csproj" />
+  </ItemGroup>
+</Project>
