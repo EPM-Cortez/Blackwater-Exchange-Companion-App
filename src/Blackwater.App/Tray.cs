@@ -2,7 +2,6 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using Forms = System.Windows.Forms;
 
 namespace BlackwaterExchange.App;
@@ -66,17 +65,9 @@ public sealed class Tray : IDisposable
     /// <summary>Draws the logo at an icon size.</summary>
     internal static System.Drawing.Bitmap Render(ImageSource image, int size)
     {
-        var visual = new DrawingVisual();
-        using (var context = visual.RenderOpen())
-            context.DrawImage(image, new Rect(0, 0, size, size));
-        var bitmap = new RenderTargetBitmap(size, size, 96, 96, PixelFormats.Pbgra32);
-        bitmap.Render(visual);
-        var encoder = new PngBitmapEncoder();
-        encoder.Frames.Add(BitmapFrame.Create(bitmap));
-        var stream = new MemoryStream();
-        encoder.Save(stream);
-        stream.Position = 0;
-        return new System.Drawing.Bitmap(stream);
+        using var stream = new MemoryStream(StoreArt.Png(StoreArt.Draw(image, size, size, 1)));
+        using var bitmap = new System.Drawing.Bitmap(stream);
+        return new System.Drawing.Bitmap(bitmap);
     }
 
     public void Dispose()

@@ -13,19 +13,9 @@
 
     <!-- Header -->
     <Grid Margin="20,18,20,14">
-      <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="Auto" />
-        <ColumnDefinition Width="*" />
-        <ColumnDefinition Width="Auto" />
-      </Grid.ColumnDefinitions>
-      <Image Source="{StaticResource Logo}" Width="38" Height="38" Margin="0,0,12,0" />
-      <StackPanel Grid.Column="1" VerticalAlignment="Center">
-        <TextBlock FontFamily="{StaticResource Display}" FontSize="20">
-          <Run Text="Blackwater" /> <Run Text="Exchange" Foreground="{StaticResource Accent}" />
-        </TextBlock>
-        <TextBlock Text="Your ledger, prices and addon for WoW Forever" Style="{StaticResource MutedText}" FontSize="12.5" />
-      </StackPanel>
-      <TextBlock x:Name="BusyText" Grid.Column="2" Text="Working…" Foreground="{StaticResource Muted}" VerticalAlignment="Center"
+      <Image Source="{StaticResource BrandLockup}" Height="45" HorizontalAlignment="Left"
+             AutomationProperties.Name="Blackwater Exchange" />
+      <TextBlock x:Name="BusyText" Text="Working…" Foreground="{StaticResource Muted}" VerticalAlignment="Center" HorizontalAlignment="Right"
                  Visibility="Collapsed" />
     </Grid>
 
@@ -107,16 +97,25 @@
           </StackPanel>
         </Border>
 
-        <!-- Addon -->
-        <Border Style="{StaticResource Card}">
+        <!-- Updates -->
+        <Border x:Name="UpdatesCard" Style="{StaticResource Card}">
           <StackPanel>
             <Grid>
-              <TextBlock Text="Forever Craft Assistant" Style="{StaticResource Heading}" VerticalAlignment="Center" />
-              <Button x:Name="AddonButton" Content="Check now" HorizontalAlignment="Right" Click="AddonNow_Click" />
+              <TextBlock Text="Updates" Style="{StaticResource Heading}" VerticalAlignment="Center" />
+              <Button x:Name="CheckVersionsButton" Content="Check versions" HorizontalAlignment="Right" Click="CheckVersions_Click" />
             </Grid>
-            <TextBlock x:Name="AddonText" Margin="0,8,0,0" TextWrapping="Wrap" Text="Not checked yet." />
-            <TextBlock Style="{StaticResource MutedText}" Margin="0,3,0,0"
-                       Text="Updates install while you play. Type /reload in game to use a new version." />
+            <TextBlock Text="Blackwater Exchange" FontWeight="SemiBold" Margin="0,9,0,0" />
+            <TextBlock x:Name="AppReleaseText" Style="{StaticResource MutedText}" Margin="0,3,0,0" />
+            <Button Style="{StaticResource LinkButton}" Content="GitHub releases" Click="OpenGitHub_Click"
+                    HorizontalAlignment="Left" Margin="0,5,0,0" />
+            <Border Height="1" Background="{StaticResource Line}" Margin="0,11,0,10" />
+            <TextBlock Text="Forever Craft Assistant" FontWeight="SemiBold" />
+            <TextBlock x:Name="AddonReleaseText" Style="{StaticResource MutedText}" Margin="0,3,0,0" />
+            <WrapPanel Margin="0,5,0,0">
+              <Button Style="{StaticResource LinkButton}" Content="CurseForge files" Click="OpenCurseForge_Click" Margin="0,0,16,0" />
+              <Button x:Name="AddonButton" Style="{StaticResource LinkButton}" Content="Install from Blackwater" Click="AddonNow_Click" />
+            </WrapPanel>
+            <TextBlock x:Name="AddonInstallText" Style="{StaticResource MutedText}" Margin="0,5,0,0" Visibility="Collapsed" />
           </StackPanel>
         </Border>
 
@@ -135,7 +134,7 @@
             </Grid>
             <CheckBox x:Name="UploadToggle" Content="Upload my gold ledger after I play" Click="Toggle_Click" />
             <CheckBox x:Name="PricesToggle" Content="Keep auction prices in the addon up to date" Click="Toggle_Click" />
-            <CheckBox x:Name="AddonToggle" Content="Install and update Forever Craft Assistant" Click="Toggle_Click" />
+            <CheckBox x:Name="AddonToggle" Content="Automatically update the addon from Blackwater" Click="Toggle_Click" />
             <CheckBox x:Name="StartupToggle" Content="Start with Windows, in the notification area" Click="Startup_Click" />
             <Button x:Name="StartupSettingsLink" Style="{StaticResource LinkButton}" Content="Change this in Windows Settings, Apps, Startup"
                     HorizontalAlignment="Left" Margin="0,0,0,6" Click="StartupSettings_Click" Visibility="Collapsed" />
@@ -151,12 +150,16 @@
     <!-- Footer -->
     <Border Grid.Row="2" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0" Padding="20,10">
       <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
         <WrapPanel VerticalAlignment="Center">
           <Button Style="{StaticResource LinkButton}" Content="Website" Click="OpenWebsite_Click" Margin="0,0,16,0" />
           <Button Style="{StaticResource LinkButton}" Content="Activity log" Click="OpenLog_Click" Margin="0,0,16,0" />
-          <TextBlock x:Name="VersionText" Foreground="{StaticResource Faint}" Text="App 0.1.0" />
+          <Button x:Name="VersionLink" Style="{StaticResource LinkButton}" Click="ShowUpdates_Click" />
         </WrapPanel>
-        <Button x:Name="UnlinkButton" Style="{StaticResource LinkButton}" Content="Unlink this PC" HorizontalAlignment="Right"
+        <Button x:Name="UnlinkButton" Grid.Column="1" Style="{StaticResource LinkButton}" Content="Unlink this PC" Margin="12,0,0,0"
                 Foreground="{StaticResource Bad}" Click="Unlink_Click" />
       </Grid>
     </Border>

@@ -1,6 +1,9 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Net.Http;
+using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Threading;
 
@@ -8,7 +11,7 @@ namespace BlackwaterExchange.App;
 
 /// <summary>
 /// The app's one window. Closing it hides it to the notification area; the engine keeps working. Everything shown
-/// comes from <see cref="Engine.Status"/> and <see cref="Engine.Settings"/>.
+/// comes from the engine and the public release checks.
 /// </summary>
 public partial class MainWindow : Window
 {
@@ -18,18 +21,28 @@ public partial class MainWindow : Window
     };
 
     private readonly Engine engine;
+    private readonly ReleaseChecker releaseChecker;
+    private readonly CancellationToken lifetime;
     private readonly DispatcherTimer clock;
+    private DispatcherTimer? versionClock;
+    private bool checkingVersions;
+    private ReleaseStatus desktopRelease = new(null, "GitHub not checked");
+    private ReleaseStatus addonRelease = new(null, "CurseForge not checked");
     private CancellationTokenSource? linking;
     private LinkStart? link;
+    private static readonly Version CurrentVersion = Version.Parse(AppInfo.Version);
+
+    private sealed record ReleaseStatus(Version? Version, string? Message = null);
 
     /// <summary>Set by the app when quitting, so closing really closes.</summary>
     public bool Quitting { get; set; }
 
-    public MainWindow(Engine engine)
+    public MainWindow(Engine engine, ReleaseChecker releaseChecker, CancellationToken lifetime)
     {
         this.engine = engine;
+        this.releaseChecker = releaseChecker;
+        this.lifetime = lifetime;
         InitializeComponent();
-        VersionText.Text = $"App {AppInfo.Version}";
         engine.StatusChanged += _ => Dispatcher.BeginInvoke(Render);
         // Keeps "5 minutes ago" true while the window is open.
         clock = new DispatcherTimer(TimeSpan.FromSeconds(30), DispatcherPriority.Background, (_, _) => Render(), Dispatcher);
@@ -45,6 +58,13 @@ public partial class MainWindow : Window
             Hide();
         }
         base.OnClosing(e);
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        clock.Stop();
+        versionClock?.Stop();
+        base.OnClosed(e);
     }
 
     // What the window shows.
@@ -77,8 +97,9 @@ public partial class MainWindow : Window
         HousesText.Text = Houses(status.Houses);
 
         AddonButton.IsEnabled = !status.Busy;
-        var version = status.AddonVersion is null ? "Not installed" : $"Version {status.AddonVersion}";
-        AddonText.Text = !settings.KeepAddon ? $"{version}. Updates are off." : status.Addon is null ? version : $"{version} · {status.Addon}";
+        AddonInstallText.Text = status.Addon;
+        AddonInstallText.Visibility = status.Addon is null ? Visibility.Collapsed : Visibility.Visible;
+        RenderVersions(status);
 
         GameFolderText.Text = status.GameFolder ?? "Not found. Choose the _forever_ folder inside World of Warcraft.";
     }
@@ -192,7 +213,9 @@ public partial class MainWindow : Window
         PricesButton.IsEnabled = AddonButton.IsEnabled = true;
         PricesText.Text = "Updated 3 houses. Last written 4 min ago.";
         HousesText.Text = "Houses: Alliance, Horde and Blackwater · Normal (PvE) (EU)";
-        AddonText.Text = "Version 1.7.2 · Up to date";
+        AppReleaseText.Text = $"Installed {AppInfo.Version} · GitHub {AppInfo.Version} · Up to date";
+        AddonReleaseText.Text = "Installed 1.7.4 · CurseForge 1.3.2 · Installed version is newer";
+        AddonInstallText.Visibility = Visibility.Collapsed;
         GameFolderText.Text = @"C:\Program Files (x86)\World of Warcraft\_forever_";
         UploadToggle.IsChecked = PricesToggle.IsChecked = AddonToggle.IsChecked = StartupToggle.IsChecked = true;
         StartupToggle.IsEnabled = true;
@@ -237,6 +260,90 @@ public partial class MainWindow : Window
     private async void UploadNow_Click(object sender, RoutedEventArgs e) => await engine.UploadNowAsync(CancellationToken.None);
     private async void PricesNow_Click(object sender, RoutedEventArgs e) => await engine.UpdatePricesNowAsync(CancellationToken.None);
     private async void AddonNow_Click(object sender, RoutedEventArgs e) => await engine.UpdateAddonNowAsync(CancellationToken.None, manual: true);
+
+    internal void StartVersionChecks()
+    {
+        versionClock = new DispatcherTimer(TimeSpan.FromHours(6), DispatcherPriority.Background,
+            async (_, _) => await CheckVersionsAsync(), Dispatcher);
+        _ = CheckVersionsAsync();
+    }
+
+    private async void CheckVersions_Click(object sender, RoutedEventArgs e) => await CheckVersionsAsync();
+
+    internal async Task CheckVersionsAsync()
+    {
+        if (checkingVersions || lifetime.IsCancellationRequested)
+            return;
+        checkingVersions = true;
+        CheckVersionsButton.IsEnabled = false;
+        desktopRelease = new(null, "Checking GitHub…");
+        addonRelease = new(null, "Checking CurseForge…");
+        RenderVersions(engine.Status);
+        try
+        {
+            var desktop = ReadReleaseAsync(token => releaseChecker.LatestDesktopAsync(RuntimeInformation.ProcessArchitecture, token),
+                "GitHub", "No compatible MSI on GitHub");
+            var addon = ReadReleaseAsync(releaseChecker.LatestForeverAddonAsync, "CurseForge", "No Forever release on CurseForge");
+            var installed = Task.Run(engine.RefreshInstalledAddonVersionAsync, lifetime);
+            await Task.WhenAll(desktop, addon, installed);
+            desktopRelease = await desktop;
+            addonRelease = await addon;
+        }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            checkingVersions = false;
+            if (!lifetime.IsCancellationRequested)
+            {
+                CheckVersionsButton.IsEnabled = true;
+                RenderVersions(engine.Status);
+            }
+        }
+    }
+
+    private async Task<ReleaseStatus> ReadReleaseAsync(Func<CancellationToken, Task<Version?>> latest, string source, string noRelease)
+    {
+        try
+        {
+            var version = await latest(lifetime);
+            return version is null ? new(null, noRelease) : new(version);
+        }
+        catch (Exception error) when (!lifetime.IsCancellationRequested && error is
+            (HttpRequestException or JsonException or IOException or InvalidDataException or ArgumentException or OperationCanceledException))
+        {
+            return new(null, $"Could not check {source}");
+        }
+    }
+
+    private void RenderVersions(EngineStatus status)
+    {
+        var desktopComparison = desktopRelease.Version?.CompareTo(CurrentVersion);
+        var addonComparison = status.AddonVersion is { } installed && addonRelease.Version is { } available
+            ? AddonInstaller.CompareVersions(available.ToString(), installed) : null;
+        var addonInstalled = status.AddonVersion is { } version ? $"Installed {version}" :
+            status.GameFolder is null ? "Choose your WoW folder" : "Addon version not detected";
+
+        AppReleaseText.Text = $"Installed {AppInfo.Version} · {DescribeRelease(desktopRelease, "GitHub", desktopComparison)}";
+        AddonReleaseText.Text = $"{addonInstalled} · {DescribeRelease(addonRelease, "CurseForge", addonComparison)}";
+        AppReleaseText.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, desktopComparison > 0 ? "AccentStrong" : "Muted");
+        AddonReleaseText.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, addonComparison > 0 ? "AccentStrong" : "Muted");
+        VersionLink.Content = desktopComparison > 0 ? $"App {AppInfo.Version} · Update available" : $"App {AppInfo.Version}";
+    }
+
+    private static string DescribeRelease(ReleaseStatus status, string source, int? comparison) => status.Version is null ? status.Message! :
+        $"{source} {status.Version}" + (comparison switch
+        {
+            > 0 => " · Update available",
+            0 => " · Up to date",
+            < 0 => " · Installed version is newer",
+            _ => "",
+        });
+
+    private void ShowUpdates_Click(object sender, RoutedEventArgs e) => UpdatesCard.BringIntoView();
+    private void OpenGitHub_Click(object sender, RoutedEventArgs e) => Open(ReleaseChecker.GitHubPage);
+    private void OpenCurseForge_Click(object sender, RoutedEventArgs e) => Open(ReleaseChecker.CurseForgePage);
 
     // Settings.
 

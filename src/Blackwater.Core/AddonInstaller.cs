@@ -22,6 +22,13 @@ public sealed class AddonInstaller(ApiClient api, string workFolder)
     {
         if (installed is null)
             return true;
+        var compared = CompareVersions(latest, installed);
+        return compared is null ? !string.Equals(latest, installed, StringComparison.OrdinalIgnoreCase) : compared > 0;
+    }
+
+    /// <summary>Compares numeric addon versions and prefers the final release over a suffix on the same version.</summary>
+    public static int? CompareVersions(string first, string second)
+    {
         static (Version? Number, string Suffix) Split(string text)
         {
             var end = 0;
@@ -32,15 +39,15 @@ public sealed class AddonInstaller(ApiClient api, string workFolder)
                 number += ".0";
             return (Version.TryParse(number, out var version) ? version : null, text[end..]);
         }
-        var (a, aRest) = Split(latest);
-        var (b, bRest) = Split(installed);
+        var (a, aRest) = Split(first);
+        var (b, bRest) = Split(second);
         if (a is null || b is null)
-            return !string.Equals(latest, installed, StringComparison.OrdinalIgnoreCase);
+            return null;
         var compared = a.CompareTo(b);
         if (compared != 0)
-            return compared > 0;
+            return compared;
         // 1.8.0 is newer than 1.8.0-beta.
-        return aRest.Length == 0 && bRest.Length > 0;
+        return (aRest.Length == 0).CompareTo(bRest.Length == 0);
     }
 
     /// <summary>Installs the latest release when it is newer than the installed copy (or none is installed).</summary>

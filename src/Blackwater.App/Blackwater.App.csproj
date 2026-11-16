@@ -10,7 +10,7 @@
     <Nullable>enable</Nullable>
     <AssemblyName>BlackwaterExchange</AssemblyName>
     <RootNamespace>BlackwaterExchange.App</RootNamespace>
-    <Version>0.1.1</Version>
+    <Version>0.1.2</Version>
     <Product>Blackwater Exchange</Product>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- Drawn from the logo by StoreArt.cs: run the app with the assets switch and the Assets folder. -->

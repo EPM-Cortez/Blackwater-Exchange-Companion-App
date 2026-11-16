@@ -108,7 +108,14 @@ public sealed class Engine : IAsyncDisposable
         var originChanged = !ApiClient.IsSameOrigin(Api().Server, server);
         Settings = settings;
         storage.SaveSettings(settings);
-        SetStatus(s => s with { GameFolder = settings.GameFolder, LinkedUser = originChanged ? null : s.LinkedUser, Problem = null });
+        SetStatus(s => s with
+        {
+            GameFolder = settings.GameFolder,
+            LinkedUser = originChanged ? null : s.LinkedUser,
+            AddonVersion = folderChanged ? null : s.AddonVersion,
+            Addon = folderChanged ? null : s.Addon,
+            Problem = null,
+        });
         if (folderChanged)
             Watch();
         nextUpload = nextPrices = nextAddon = DateTimeOffset.MinValue;
@@ -249,6 +256,13 @@ public sealed class Engine : IAsyncDisposable
             log($"Prices written for {string.Join(", ", outcome.Written)}");
     });
 
+    public Task RefreshInstalledAddonVersionAsync() => RunJob("addon", () =>
+    {
+        var installed = Game()?.InstalledAddonVersion();
+        SetStatus(s => s with { AddonVersion = installed });
+        return Task.CompletedTask;
+    });
+
     public Task UpdateAddonNowAsync(CancellationToken cancellationToken, bool manual = false) => RunJob("addon", async () =>
     {
         nextAddon = DateTimeOffset.UtcNow + AddonEvery;
@@ -263,8 +277,9 @@ public sealed class Engine : IAsyncDisposable
         Save(state => state with { LastAddonCheckAt = DateTimeOffset.UtcNow });
         var message = outcome.Result switch
         {
-            "installed" => $"Updated to {outcome.Installed}",
-            "up_to_date" or "no_release" => "Up to date",
+            "installed" => $"Blackwater installed {outcome.Installed}. Type /reload in WoW to load it.",
+            "up_to_date" => $"No newer release on Blackwater ({outcome.Latest}).",
+            "no_release" => "Blackwater has no addon download available.",
             _ => outcome.Problem,
         };
         SetStatus(s => s with { AddonVersion = game.InstalledAddonVersion(), Addon = message });

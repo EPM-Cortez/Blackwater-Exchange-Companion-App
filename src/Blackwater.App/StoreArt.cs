@@ -8,7 +8,7 @@ using System.Windows.Media.Imaging;
 namespace BlackwaterExchange.App;
 
 /// <summary>
-/// Draws the package's images from the logo in App.xaml (the website's shield), so they never drift from it:
+/// Draws the package's images from the BX logo in App.xaml:
 /// <c>BlackwaterExchange.exe --assets FOLDER</c> writes the MSIX logos at every scale and app.ico, and
 /// <c>--store-shots FOLDER</c> writes 1920×1080 Store screenshots of the window, with sample data.
 /// </summary>
@@ -39,20 +39,22 @@ public static class StoreArt
         WriteIcon(logo, Path.Combine(folder, "app.ico"), [16, 20, 24, 32, 40, 48, 64, 256]);
     }
 
-    /// <summary>The logo centred on a transparent canvas, its height <paramref name="fill"/> of the canvas's.</summary>
-    private static BitmapSource Draw(ImageSource logo, int width, int height, double fill)
+    /// <summary>The logo fitted to a transparent canvas without changing its aspect ratio.</summary>
+    internal static BitmapSource Draw(ImageSource logo, int width, int height, double fill)
     {
-        var size = Math.Min(width, height) * fill;
+        var scale = Math.Min(width / logo.Width, height / logo.Height) * fill;
+        var logoWidth = logo.Width * scale;
+        var logoHeight = logo.Height * scale;
         var visual = new DrawingVisual();
         using (var context = visual.RenderOpen())
-            context.DrawImage(logo, new Rect((width - size) / 2, (height - size) / 2, size, size));
+            context.DrawImage(logo, new Rect((width - logoWidth) / 2, (height - logoHeight) / 2, logoWidth, logoHeight));
         var bitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
         bitmap.Render(visual);
         bitmap.Freeze();
         return bitmap;
     }
 
-    private static byte[] Png(BitmapSource image)
+    internal static byte[] Png(BitmapSource image)
     {
         var encoder = new PngBitmapEncoder();
         encoder.Frames.Add(BitmapFrame.Create(image));

@@ -14,7 +14,7 @@ The preview MSI has no Authenticode signature. Windows or your organisation's po
 Compare its SHA-256 with the release's `SHA256SUMS.txt` to check that you downloaded the published file.
 
 ```powershell
-Get-FileHash .\BlackwaterExchange-0.1.1-x64.msi -Algorithm SHA256
+Get-FileHash .\BlackwaterExchange-0.1.2-x64.msi -Algorithm SHA256
 ```
 
 Price sync requires a Forever Craft Assistant version that reads `ForeverCraftAssistantMarketData`. The companion
@@ -34,7 +34,8 @@ managed separately from the MSI.
 - **uploads the gold ledger**: Forever Craft Assistant's saved file, after WoW saves it;
 - **keeps addon prices fresh**: writes the `ForeverCraftAssistantMarketData` addon with every house the player's
   characters trade on;
-- **manages Forever Craft Assistant**: use **Check now** to install a release or enable automatic updates in Settings;
+- **checks versions** for the desktop app on GitHub and Forever Craft Assistant on CurseForge;
+- **manages Forever Craft Assistant**: use **Install from Blackwater** or enable automatic addon updates in Settings;
 - **can start with Windows** in the notification area if you enable the option.
 
 .NET 10 and nothing else: no NuGet packages in the app (the test project uses xUnit, as `AuctionMarket.Tests`
@@ -57,6 +58,7 @@ does; nothing from it ships).
 | `LedgerUploader.cs` | After linking and enabling uploads, sends each changed `ForeverCraftAssistant.lua` in full for game accounts under the selected WoW installation. Opens files with sharing, checks their actual path and reads at most 16 MiB per file. A file the website refuses is retried when the game writes a new one |
 | `PriceUpdater.cs` | Works out the houses from each character's realm (ruleset from the name's end), faction and region, plus each ruleset's Blackwater house. Asks `/v1/markets` for scan times and downloads `/v1/markets/{house}/addon` only for houses with a newer scan from the last six hours. `MarketDataWriter` checks every value and writes schema 2 `MarketData.lua` atomically |
 | `AddonInstaller.cs` | Compares `/v1/addon/latest` with the installed `.toc` version. Downloads only from the same server, checks size and SHA-256, and unpacks only entries under `ForeverCraftAssistant/` (no `..`, drive letters, more than 2,000 files or 128 MB). Unpacks to a hidden folder beside the addon and swaps it in with two renames, putting the old copy back if that fails |
+| `ReleaseChecker.cs` | Reads public release metadata from GitHub and CurseForge. Checks GitHub previews with an MSI for the running architecture and filters CurseForge to published WoW Forever releases. The checks send no device credentials |
 | `Engine.cs` | Runs the jobs one at a time: uploads a few seconds after WoW saves (on logout, exit or any UI reload, including the addon's Sync button; a `FileSystemWatcher` on `WTF\Account`) and every 10 minutes, prices every 15 minutes, addon every 6 hours. Reports `EngineStatus` and `Notify` events for the window. A key removed on the website clears it and asks the player to link again |
 | `AppStorage.cs`, `FileLog.cs` | `settings.json`, `state.json` and `app.log` in `%LOCALAPPDATA%\Blackwater Exchange` |
 
@@ -70,18 +72,21 @@ revokes its key. Read the [Blackwater Exchange privacy policy](https://blackwate
 ## The app
 
 `src/Blackwater.App` is WPF, with Windows Forms only for the tray icon (both part of .NET's Windows Desktop
-runtime). One window, in the website's colours:
+runtime). The window, tray and installer use the website's BX branding.
 
 - **Account**: Link this PC (shows the code and opens `/link?code=…`), or who it is linked to.
-- **Gold ledger uploads**, **Auction prices in the addon**, **Forever Craft Assistant**: each job's last result,
-  with Upload now, Update now and Check now.
+- **Gold ledger uploads** and **Auction prices in the addon** show each job's last result and let you run it now.
+- **Updates** shows the installed and published versions, including when the installed build is newer than the public
+  listing. Checks run at startup, every six hours and when you select **Check versions**. Use **GitHub releases**
+  or **CurseForge files** to open the download page. **Install from Blackwater** uses the separate Blackwater addon
+  release channel.
 - **Settings**: the WoW Forever folder (Change… accepts `World of Warcraft` or its `_forever_` folder), a switch
   for each job, Start with Windows, and this PC's name on the website.
 - **Footer**: Website, Activity log (`app.log`), Unlink this PC.
 
 Closing the window hides it; the tray icon's menu has Open, Upload my ledger now, Update prices now, Open my
 ledger on the website and Quit. Windows shows the app's notifications (an addon update, the key being removed)
-as toasts. Only pages on the configured server are ever opened.
+as toasts. Account and ledger links use the configured server. Update links open the project's GitHub and CurseForge pages.
 
 One copy runs per Windows user (`Local\BlackwaterExchangeApp`); starting it again opens the running copy's window.
 Started at sign-in, it stays in the tray unless it needs the player (not linked, game not found).

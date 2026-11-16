@@ -64,7 +64,7 @@ public partial class App : Application
         log = new FileLog(storage.Folder);
         http = ApiClient.CreateHttpClient();
         engine = new Engine(storage, http, AppInfo.Version, log.Write);
-        window = new MainWindow(engine);
+        window = new MainWindow(engine, new ReleaseChecker(http, AppInfo.Version), stop.Token);
 
         if (shots is not null)
         {
@@ -90,6 +90,7 @@ public partial class App : Application
             {
             }
         });
+        window.StartVersionChecks();
         if (!StartWithWindows.StartedAtSignIn(args) || !engine.Status.Linked)
             ShowWindow();
     }
@@ -137,13 +138,13 @@ public partial class App : Application
         {
             Directory.CreateDirectory(folder);
             window!.Left = -10000;
-            window.Height = 1010; // the whole window, nothing cut in half
             window.ShowActivated = false;
             window.Show();
             var content = (FrameworkElement)window.Content;
             async Task Shot(bool linking, string file)
             {
                 window.ShowDemo(linking);
+                window.Height = linking ? 1300 : 1120;
                 await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Background);
                 window.UpdateLayout();
                 StoreArt.WriteScreenshot(content, Path.Combine(folder, file));
@@ -167,6 +168,7 @@ public partial class App : Application
             await engine!.UpdateAddonNowAsync(CancellationToken.None);
             await engine.UpdatePricesNowAsync(CancellationToken.None);
             await engine.UploadNowAsync(CancellationToken.None);
+            await window!.CheckVersionsAsync();
             window!.Left = -10000;
             // Tall enough to show every section.
             window.Height = 1080;
