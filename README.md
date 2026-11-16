@@ -14,7 +14,7 @@ The preview MSI has no Authenticode signature. Windows or your organisation's po
 Compare its SHA-256 with the release's `SHA256SUMS.txt` to check that you downloaded the published file.
 
 ```powershell
-Get-FileHash .\BlackwaterExchange-0.1.2-x64.msi -Algorithm SHA256
+Get-FileHash .\BlackwaterExchange-0.1.3-x64.msi -Algorithm SHA256
 ```
 
 Price sync requires a Forever Craft Assistant version that reads `ForeverCraftAssistantMarketData`. The companion

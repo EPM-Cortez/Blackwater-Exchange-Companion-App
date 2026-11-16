@@ -6,9 +6,11 @@
                   Schedule="afterInstallInitialize" />
     <MediaTemplate EmbedCab="yes" />
 
-    <Icon Id="AppIcon" SourceFile="$(var.AppIcon)" />
-    <Property Id="ARPPRODUCTICON" Value="AppIcon" />
+    <Icon Id="BlackwaterExchange.ico" SourceFile="$(var.AppIcon)" />
+    <Property Id="ARPPRODUCTICON" Value="BlackwaterExchange.ico" />
     <Property Id="ARPURLINFOABOUT" Value="https://blackwater.exchange/" />
+    <!-- Windows Installer creates a regular link to the component's executable and uses its embedded icon. -->
+    <Property Id="DISABLEADVTSHORTCUTS" Value="1" />
 
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="INSTALLFOLDER" Name="Blackwater Exchange" />
@@ -28,7 +30,9 @@
       <Component Id="AppExecutable" Guid="*">
         <File Id="BlackwaterExe" Source="$(var.PublishDirectory)\BlackwaterExchange.exe" KeyPath="yes">
           <Shortcut Id="StartMenuShortcut" Directory="ProgramMenuFolder" Name="Blackwater Exchange"
-                    Advertise="yes" WorkingDirectory="INSTALLFOLDER" Icon="AppIcon" />
+                    Advertise="yes" WorkingDirectory="INSTALLFOLDER" Description="Blackwater Exchange">
+            <ShortcutProperty Key="System.AppUserModel.ID" Value="BlackwaterExchange.Companion" />
+          </Shortcut>
         </File>
       </Component>
     </ComponentGroup>

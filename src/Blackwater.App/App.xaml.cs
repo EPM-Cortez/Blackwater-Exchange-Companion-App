@@ -52,6 +52,7 @@ public partial class App : Application
 
         if (preview is null && shots is null)
         {
+            AppInfo.SetShellIdentity();
             instance = SingleInstance.Claim(() => Dispatcher.BeginInvoke(ShowWindow));
             if (instance is null)
             {

@@ -7,8 +7,20 @@ namespace BlackwaterExchange.App;
 
 public static class AppInfo
 {
+    // Matches the Start menu shortcut in packaging/BlackwaterExchange.wxs.
+    private const string AppUserModelId = "BlackwaterExchange.Companion";
+
     public static string Version { get; } =
         Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.1.0";
+
+    public static void SetShellIdentity()
+    {
+        if (!StartWithWindows.IsPackaged)
+            _ = SetCurrentProcessExplicitAppUserModelID(AppUserModelId);
+    }
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)]
+    private static extern int SetCurrentProcessExplicitAppUserModelID(string appId);
 }
 
 /// <summary>
