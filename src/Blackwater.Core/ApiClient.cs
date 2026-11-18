@@ -240,9 +240,9 @@ public sealed class ApiClient
 
     // Prices.
 
-    public async Task<IReadOnlyList<MarketInfo>> MarketsAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<MarketInfo>> MarketsAsync(string token, CancellationToken cancellationToken)
     {
-        using var request = Request(HttpMethod.Get, "v1/markets");
+        using var request = Request(HttpMethod.Get, "api/devices/me/markets", token);
         using var response = await SendAsync(request, cancellationToken);
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
         var markets = new List<MarketInfo>();
@@ -258,10 +258,10 @@ public sealed class ApiClient
         return markets;
     }
 
-    /// <summary>One house's prices for the addon (/v1/markets/{market}/addon), or null when there is no fresh scan.</summary>
-    public async Task<JsonDocument?> MarketExportAsync(MarketKey market, CancellationToken cancellationToken)
+    /// <summary>One house's prices for the addon for this linked device, or null when there is no fresh scan.</summary>
+    public async Task<JsonDocument?> MarketExportAsync(MarketKey market, string token, CancellationToken cancellationToken)
     {
-        using var request = Request(HttpMethod.Get, $"v1/markets/{market}/addon");
+        using var request = Request(HttpMethod.Get, $"api/devices/me/markets/{market}/addon", token);
         using var response = await SendAsync(request, cancellationToken, allowNotFound: true);
         if (response.StatusCode == HttpStatusCode.NotFound)
             return null;

@@ -14,7 +14,7 @@ The preview MSI has no Authenticode signature. Windows or your organisation's po
 Compare its SHA-256 with the release's `SHA256SUMS.txt` to check that you downloaded the published file.
 
 ```powershell
-Get-FileHash .\BlackwaterExchange-0.1.3-x64.msi -Algorithm SHA256
+Get-FileHash .\BlackwaterExchange-0.1.4-x64.msi -Algorithm SHA256
 ```
 
 Price sync requires a Forever Craft Assistant version that reads `ForeverCraftAssistantMarketData`. The companion
@@ -24,8 +24,7 @@ separately.
 
 Select your WoW Forever `_forever_` folder if the app has not found it. After Forever Craft Assistant has saved a
 character's realm, faction and region, the app can find the right auction houses and write fresh prices. Use **Update
-now** in the desktop app, then `/reload` in WoW to load the new data into Forever Craft Assistant. Price sync works
-without a Blackwater account. If you use **Start with Windows**, turn it off in the app before uninstalling. The
+now** in the desktop app, then `/reload` in WoW to load the new data into Forever Craft Assistant. Link this PC to a free Blackwater account before syncing prices. Ledger uploads are a separate setting and default off on new installs. If you use **Start with Windows**, turn it off in the app before uninstalling. The
 Windows uninstall entry is **Blackwater Exchange**. App settings, your website account and your WoW addon files are
 managed separately from the MSI.
 
@@ -56,7 +55,7 @@ does; nothing from it ships).
 | `ApiClient.cs` | HTTPS API (loopback HTTP for testing). Sends `User-Agent: BlackwaterExchangeApp/<version>` and `X-App-Version`. API requests reject redirects and send credentials only for their supported operations |
 | `DeviceKey.cs` | The key and issuing origin, encrypted with Windows DPAPI for the current user (`device.key`) |
 | `LedgerUploader.cs` | After linking and enabling uploads, sends each changed `ForeverCraftAssistant.lua` in full for game accounts under the selected WoW installation. Opens files with sharing, checks their actual path and reads at most 16 MiB per file. A file the website refuses is retried when the game writes a new one |
-| `PriceUpdater.cs` | Works out the houses from each character's realm (ruleset from the name's end), faction and region, plus each ruleset's Blackwater house. Asks `/v1/markets` for scan times and downloads `/v1/markets/{house}/addon` only for houses with a newer scan from the last six hours. `MarketDataWriter` checks every value and writes schema 2 `MarketData.lua` atomically |
+| `PriceUpdater.cs` | Works out the houses from each character's realm (ruleset from the name's end), faction and region, plus each ruleset's Blackwater house. Uses the linked device token with `/api/devices/me/markets` for scan times and downloads `/api/devices/me/markets/{house}/addon` only for houses with a newer scan from the last six hours. `MarketDataWriter` checks every value and writes schema 2 `MarketData.lua` atomically |
 | `AddonInstaller.cs` | Compares `/v1/addon/latest` with the installed `.toc` version. Downloads only from the same server, checks size and SHA-256, and unpacks only entries under `ForeverCraftAssistant/` (no `..`, drive letters, more than 2,000 files or 128 MB). Unpacks to a hidden folder beside the addon and swaps it in with two renames, putting the old copy back if that fails |
 | `ReleaseChecker.cs` | Reads public release metadata from GitHub and CurseForge. Checks GitHub previews with an MSI for the running architecture and filters CurseForge to published WoW Forever releases. The checks send no device credentials |
 | `Engine.cs` | Runs the jobs one at a time: uploads a few seconds after WoW saves (on logout, exit or any UI reload, including the addon's Sync button; a `FileSystemWatcher` on `WTF\Account`) and every 10 minutes, prices every 15 minutes, addon every 6 hours. Reports `EngineStatus` and `Notify` events for the window. A key removed on the website clears it and asks the player to link again |

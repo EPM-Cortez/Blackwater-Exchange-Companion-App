@@ -78,7 +78,7 @@ square logo.
 ## System requirements
 
 Windows 10 version 1809 or later, x64 or Arm64. WoW Forever (from the Battle.net launcher) with Forever Craft
-Assistant for the ledger and prices. An account on blackwater.exchange (sign in with Discord) for uploads.
+Assistant for the ledger and prices. An account on blackwater.exchange (sign in with Discord) for price sync and optional uploads.
 
 ## Age rating questionnaire
 

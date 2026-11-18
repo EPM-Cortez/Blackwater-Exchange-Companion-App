@@ -33,7 +33,7 @@
             <StackPanel x:Name="UnlinkedPanel">
               <TextBlock Text="Link to your account" Style="{StaticResource Heading}" />
               <TextBlock Style="{StaticResource MutedText}" Margin="0,6,0,12"
-                         Text="Link this PC to your Blackwater Exchange account and the app uploads your gold ledger whenever you log out of WoW. You sign in with Discord on the website." />
+                         Text="Link this PC to sync auction prices. You can also enable gold ledger uploads in Settings. Sign in with Discord on the website." />
               <Button x:Name="LinkButton" Content="Link this PC" Style="{StaticResource Primary}" HorizontalAlignment="Left"
                       Click="Link_Click" />
             </StackPanel>

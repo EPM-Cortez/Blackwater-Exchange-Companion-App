@@ -61,7 +61,7 @@ public class CoreTests
     {
         using var folder = new TempFolder();
         var storage = new AppStorage(folder.Path);
-        Assert.True(storage.LoadSettings().UploadLedger);
+        Assert.False(storage.LoadSettings().UploadLedger);
         storage.SaveSettings(new AppSettings { GameFolder = @"S:\World of Warcraft\_forever_", KeepPrices = false });
         Assert.False(storage.LoadSettings().KeepPrices);
         Assert.Equal(@"S:\World of Warcraft\_forever_", storage.LoadSettings().GameFolder);
@@ -232,20 +232,22 @@ public class CoreTests
         var server = new FakeServer((request, _) =>
         {
             var path = request.RequestUri!.AbsolutePath;
-            if (path == "/v1/markets")
+            Assert.Equal("Bearer device-fixture", request.Headers.Authorization?.ToString());
+            if (path == "/api/devices/me/markets")
                 return FakeServer.Json($$"""
                     [{"region":"eu","ruleset_id":2,"house_id":114,"name":"Horde","captured_at":"{{scan:O}}"},
                      {"region":"eu","ruleset_id":2,"house_id":117,"name":"Blackwater","captured_at":"{{scan:O}}"},
                      {"region":"eu","ruleset_id":1,"house_id":113,"name":"Old","captured_at":"{{scan.AddDays(-2):O}}"}]
                     """);
             exports++;
-            var market = path.Split('/')[3] + "/" + path.Split('/')[4] + "/" + path.Split('/')[5];
+            Assert.EndsWith("/addon", path);
+            var market = string.Join('/', path.Split('/')[5..8]);
             return FakeServer.Json(Export(market, scan.ToUnixTimeSeconds()));
         });
         var updater = new PriceUpdater(FakeServer.Client(server));
         MarketKey[] houses = [new("eu", 2, 114), new("eu", 2, 117), new("eu", 1, 113)];
 
-        var first = await updater.UpdateAsync(game, houses, new AppState(), default);
+        var first = await updater.UpdateAsync(game, houses, new AppState(), "device-fixture", default);
         Assert.Equal("written", first.Result);
         Assert.Equal(["eu/2/114", "eu/2/117"], first.Written);
         Assert.Equal(["eu/1/113"], first.Skipped); // no scan for two days: not even downloaded
@@ -254,15 +256,15 @@ public class CoreTests
         Assert.Contains("[\"eu/2/114\"] = { faction = \"Horde\"", File.ReadAllText(file));
         Assert.True(File.Exists(Path.Combine(game.AddOns, "ForeverCraftAssistantMarketData", "ForeverCraftAssistantMarketData.toc")));
 
-        var second = await updater.UpdateAsync(game, houses, first.State, default);
+        var second = await updater.UpdateAsync(game, houses, first.State, "device-fixture", default);
         Assert.Equal("up_to_date", second.Result);
         Assert.Equal(2, exports);
 
         scan = scan.AddMinutes(10);
-        var third = await updater.UpdateAsync(game, houses, first.State, default);
+        var third = await updater.UpdateAsync(game, houses, first.State, "device-fixture", default);
         Assert.Equal("written", third.Result);
         Assert.Equal(4, exports);
 
-        Assert.Equal("no_characters", (await updater.UpdateAsync(game, [], first.State, default)).Result);
+        Assert.Equal("no_characters", (await updater.UpdateAsync(game, [], first.State, "device-fixture", default)).Result);
     }
 }

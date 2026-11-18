@@ -148,7 +148,7 @@ public sealed class Engine : IAsyncDisposable
         Save(state => state with { LinkedUser = userName, UploadedFiles = new(StringComparer.OrdinalIgnoreCase) });
         SetStatus(s => s with { LinkedUser = userName, Problem = null });
         log($"Linked to {userName}");
-        nextUpload = DateTimeOffset.MinValue;
+        nextUpload = nextPrices = DateTimeOffset.MinValue;
         return userName;
     }
 
@@ -202,7 +202,7 @@ public sealed class Engine : IAsyncDisposable
     private void Unlinked()
     {
         Forget();
-        SetStatus(s => s with { Problem = "This PC was removed from your account on the website. Link it again to keep uploading." });
+        SetStatus(s => s with { Problem = "This PC was removed from your account on the website. Link it again to sync prices or upload your ledger." });
         Notify?.Invoke("Blackwater Exchange", "This PC is no longer linked to your account. Open the app to link it again.");
         log("The device key was removed on the website");
     }
@@ -239,15 +239,24 @@ public sealed class Engine : IAsyncDisposable
     public Task UpdatePricesNowAsync(CancellationToken cancellationToken) => RunJob("prices", async () =>
     {
         nextPrices = DateTimeOffset.UtcNow + PricesEvery;
-        if (!Settings.KeepPrices || Game() is not { } game)
+        if (!Settings.KeepPrices)
+            return;
+        var api = Api();
+        if (key.Read(api.Server) is not { } token)
+        {
+            SetStatus(s => s with { Prices = "Link this PC to update auction prices." });
+            return;
+        }
+        if (Game() is not { } game)
             return;
         var houses = PriceUpdater.HousesFor(game.SavedFiles());
-        var outcome = await new PriceUpdater(Api()).UpdateAsync(game, houses, storage.LoadState(), cancellationToken);
+        var outcome = await new PriceUpdater(api).UpdateAsync(game, houses, storage.LoadState(), token, cancellationToken);
         storage.SaveState(outcome.State);
         var message = outcome.Result switch
         {
-            "written" => $"Updated {outcome.Written.Count} houses",
+            "written" => $"Updated {outcome.Written.Count} houses" + (outcome.Skipped.Count == 0 ? "" : $". Skipped {string.Join(", ", outcome.Skipped)} (freshness or account limit)"),
             "up_to_date" => "Up to date",
+            "house_limit" => "This account has reached its daily house limit. Existing prices have been kept.",
             "no_characters" => "Log in once with the addon so the app knows your realms.",
             _ => "The website has no recent scan for your houses yet.",
         };

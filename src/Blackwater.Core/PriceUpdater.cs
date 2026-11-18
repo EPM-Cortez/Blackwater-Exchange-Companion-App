@@ -71,7 +71,7 @@ public sealed class PriceUpdater(ApiClient api, Func<DateTimeOffset>? clock = nu
     /// file is missing or holds other houses). Houses without a fresh scan are left out; with none fresh, the
     /// installed file stays as it is.
     /// </summary>
-    public async Task<Outcome> UpdateAsync(GameFolder game, IReadOnlyList<MarketKey> houses, AppState state, CancellationToken cancellationToken)
+    public async Task<Outcome> UpdateAsync(GameFolder game, IReadOnlyList<MarketKey> houses, AppState state, string token, CancellationToken cancellationToken)
     {
         if (houses.Count == 0)
             return new Outcome("no_characters", [], [], state);
@@ -80,7 +80,7 @@ public sealed class PriceUpdater(ApiClient api, Func<DateTimeOffset>? clock = nu
         var toc = Path.Combine(folder, GameFolder.MarketDataAddonName + ".toc");
         game.RequireOrdinaryPath(file);
         // Only houses the website has scanned in the last six hours; the rest are left out until it has.
-        var listed = (await api.MarketsAsync(cancellationToken)).ToDictionary(market => market.Key.ToString());
+        var listed = (await api.MarketsAsync(token, cancellationToken)).ToDictionary(market => market.Key.ToString());
         var available = houses.Where(house => listed.TryGetValue(house.ToString(), out var market)
             && market.CapturedAt is { } captured && now() - captured < TimeSpan.FromHours(6)).ToList();
         var unavailable = houses.Except(available).Select(house => house.ToString()).ToList();
@@ -97,18 +97,27 @@ public sealed class PriceUpdater(ApiClient api, Func<DateTimeOffset>? clock = nu
         var writer = new MarketDataWriter();
         var captures = new Dictionary<string, DateTimeOffset>();
         var skipped = new List<string>(unavailable);
+        var houseLimitReached = false;
         foreach (var house in available)
         {
-            using var export = await api.MarketExportAsync(house, cancellationToken);
-            if (export is null || !writer.Add(house, export.RootElement, now()))
+            try
             {
-                skipped.Add(house.ToString());
-                continue;
+                using var export = await api.MarketExportAsync(house, token, cancellationToken);
+                if (export is null || !writer.Add(house, export.RootElement, now()))
+                {
+                    skipped.Add(house.ToString());
+                    continue;
+                }
+                captures[house.ToString()] = DateTimeOffset.FromUnixTimeSeconds(export.RootElement.GetProperty("captured_at").GetInt64());
             }
-            captures[house.ToString()] = DateTimeOffset.FromUnixTimeSeconds(export.RootElement.GetProperty("captured_at").GetInt64());
+            catch (ApiException exception) when (exception.Error == "house_limit")
+            {
+                houseLimitReached = true;
+                skipped.Add(house.ToString());
+            }
         }
         if (captures.Count == 0)
-            return new Outcome("nothing_fresh", [], skipped, state);
+            return new Outcome(houseLimitReached ? "house_limit" : "nothing_fresh", [], skipped, state);
 
         game.RequireOrdinaryPath(file);
         game.RequireOrdinaryPath(toc);

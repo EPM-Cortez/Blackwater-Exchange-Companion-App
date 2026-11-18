@@ -90,8 +90,9 @@ public partial class MainWindow : Window
             : status.Upload ?? "Uploads when WoW saves: when you log out or exit, or press Sync in the addon's Ledger tab while playing.";
         UploadWhen.Text = status.LastUploadAt is { } uploaded ? $"Last upload {Ago(uploaded)}" : "";
 
-        PricesButton.IsEnabled = settings.KeepPrices && !status.Busy;
-        PricesText.Text = !settings.KeepPrices ? "Off. Switch it on in Settings."
+        PricesButton.IsEnabled = status.Linked && settings.KeepPrices && !status.Busy;
+        PricesText.Text = !status.Linked ? "Link this PC to update auction prices."
+            : !settings.KeepPrices ? "Off. Switch it on in Settings."
             : status.Prices is null ? "Not checked yet."
             : status.LastPricesAt is { } prices ? $"{status.Prices}. Last written {Ago(prices)}." : status.Prices;
         HousesText.Text = Houses(status.Houses);
@@ -248,7 +249,7 @@ public partial class MainWindow : Window
 
     private async void Unlink_Click(object sender, RoutedEventArgs e)
     {
-        if (MessageBox.Show(this, "Stop uploading from this PC? Your ledger stays on the website. You can link again at any time.",
+        if (MessageBox.Show(this, "Stop price sync and ledger uploads on this PC? Your ledger stays on the website. You can link again at any time.",
                 "Unlink this PC", MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK)
             return;
         if (!await engine.UnlinkAsync(CancellationToken.None))

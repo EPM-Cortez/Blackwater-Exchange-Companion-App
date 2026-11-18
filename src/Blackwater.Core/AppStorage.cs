@@ -13,7 +13,7 @@ public sealed record AppSettings
     public string? GameFolder { get; init; }
     /// <summary>The name the website shows for this PC.</summary>
     public string? DeviceName { get; init; }
-    public bool UploadLedger { get; init; } = true;
+    public bool UploadLedger { get; init; }
     public bool KeepPrices { get; init; } = true;
     public bool KeepAddon { get; init; }
     public bool StartWithWindows { get; init; } = true;
